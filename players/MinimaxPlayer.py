@@ -4,6 +4,9 @@ MiniMax Player
 from players.AbstractPlayer import AbstractPlayer
 #TODO: you can import more modules, if needed
 import time
+import numpy as np
+from SearchAlgos import MiniMax
+import utils
 
 class Player(AbstractPlayer):
     def __init__(self, game_time):
@@ -76,7 +79,7 @@ class Player(AbstractPlayer):
     def _iterative_minimax(self, start_state, time_limit, minimax):
         start = time.time()
         depth = 1
-        ret_val, dir = minimax.search(start_state, depth, True)
+        ret_val, direction = minimax.search(start_state, depth, True)
         end = time.time()
         last_calc_time = end - start
         time_for_node = last_calc_time / 2
@@ -85,13 +88,13 @@ class Player(AbstractPlayer):
 
         while needed_time + time.time() - start < time_limit:
             start = time.time()
-            ret_val, dir = minimax.search(start_state, depth, True)
+            ret_val, direction = minimax.search(start_state, depth, True)
             end = time.time()
             last_calc_time = end - start
             depth += 1
             needed_time = last_calc_time + pow(3, depth) * time_for_node
 
-        cell, soldier_that_moved = dir
+        cell, soldier_that_moved = direction
         self.my_pos[soldier_that_moved] = cell
         self.board[cell] = 1
 
@@ -100,13 +103,13 @@ class Player(AbstractPlayer):
 
     def _stage_1_move(self, time_limit) -> tuple:
         start_state = self.board
-        minimax = Minimax(_utility, _succ_stage1)
-        return _iterative_minimax(start_state, time_limit, minimax)
+        minimax = MiniMax(self._utility, self._succ_stage1)
+        return self._iterative_minimax(start_state, time_limit, minimax)
 
     def _stage_2_move(self, time_limit) -> tuple:
         start_state = self.board
-        minimax = Minimax(_utility, _succ_stage2, None, goal???)
-        return _iterative_minimax(start_state, time_limit, minimax)
+        minimax = MiniMax(self._utility, self._succ_stage2, None, goal???)
+        return self._iterative_minimax(start_state, time_limit, minimax)
 
 
 
@@ -128,8 +131,8 @@ class Player(AbstractPlayer):
         for cell in range(23):
             if board[cell] == player:
                 board[cell] = 0
-                for d in get_directions(cell):
-                    if borad[d] == 0:
+                for d in utils.get_directions(cell):
+                    if board[d] == 0:
                         board[d] = player
                         yield board
                         board[d] = 0
