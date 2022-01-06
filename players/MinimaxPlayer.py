@@ -103,21 +103,18 @@ class Player(AbstractPlayer):
 
     def _stage_1_move(self, time_limit) -> tuple:
         start_state = self.board
-        minimax = MiniMax(self._utility, self._succ_stage1)
+        minimax = MiniMax(self._succ_stage1)
         return self._iterative_minimax(start_state, time_limit, minimax)
 
     def _stage_2_move(self, time_limit) -> tuple:
         start_state = self.board
-        minimax = MiniMax(self._utility, self._succ_stage2, None, goal???)
+        minimax = MiniMax(sself._succ_stage2, None, goal???)
         return self._iterative_minimax(start_state, time_limit, minimax)
 
 
 
     ########## helper functions for Minimax algorithm ##########
     # TODO: add here the utility, succ, and perform_move functions used in Minimax algorithm
-
-    def _utility(self, state):
-        return heuristic(state)
 
     def _succ_stage1(self, board, player):
         for cell in range(23):
