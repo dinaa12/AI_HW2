@@ -4,11 +4,30 @@
 #TODO: update ALPHA_VALUE_INIT, BETA_VALUE_INIT in utils
 import time
 import numpy as np
+import Game as game
+import utils
 ALPHA_VALUE_INIT = -np.inf
 BETA_VALUE_INIT = np.inf # !!!!!
 
+
+class Timeout(Exception):
+    pass
+
+
+class GameState:
+    def __init__(self, board, curr_player, player_move):
+        """
+        :param board: board state
+        :param curr_player: player who performed last move, 1 - maximizer, 2 - opponent
+        :param player_move: position where player placed a solider
+        """
+        self.board = board
+        self.curr_player = curr_player
+        self.player_move = player_move
+
+
 class SearchAlgos:
-    def __init__(self, succ, perform_move=None, goal=None):
+    def __init__(self, utility, succ, perform_move=None, goal=None):
         """The constructor for all the search algos.
         You can code these functions as you like to, 
         and use them in MiniMax and AlphaBeta algos as learned in class
@@ -17,28 +36,33 @@ class SearchAlgos:
         :param perform_move: The perform move function.
         :param goal: function that check if you are in a goal state.
         """
-        self.utility = self.heuristic
+        self.utility = utility
         self.succ = succ
         self.perform_move = perform_move
         self.goal = goal
 
-    def search(self, state, depth, maximizing_player):
+    def search(self, game_state, depth, maximizing_player, time_limit, start_time):
         pass
 
-    def heuristic(self, state):
+    def heuristic(self, game_state):
         h = .....
         return h
 
 
 class MiniMax(SearchAlgos):
 
-    def search(self, state, depth, maximizing_player):
+    def search(self, state, depth, maximizing_player, time_limit, start_time):
         """Start the MiniMax algorithm.
+        :param start_time:
+        :param time_limit:
         :param state: The state to start from.
         :param depth: The maximum allowed depth for the algorithm.
         :param maximizing_player: Whether this is a max node (True) or a min node (False).
         :return: A tuple: (The min max algorithm value, The direction in case of max node or None in min mode)
         """
+        if time.time() - start_time >= time_limit:
+            raise Timeout
+
         if self.goal(state) or depth == 0:
             if maximizing_player:
                 return self.utility(state), 000   # TODO: replace 000, "direction in case of max node"???
@@ -65,15 +89,20 @@ class MiniMax(SearchAlgos):
 
 class AlphaBeta(SearchAlgos):
 
-    def search(self, state, depth, maximizing_player, alpha=ALPHA_VALUE_INIT, beta=BETA_VALUE_INIT):
+    def search(self, state, depth, maximizing_player, time_limit, start_time, alpha=ALPHA_VALUE_INIT, beta=BETA_VALUE_INIT):
         """Start the AlphaBeta algorithm.
+        :param time_limit:
+        :param start_time:
         :param state: The state to start from.
         :param depth: The maximum allowed depth for the algorithm.
         :param maximizing_player: Whether this is a max node (True) or a min node (False).
         :param alpha: alpha value
-        :param: beta: beta value
+        :param beta: beta value
         :return: A tuple: (The min max algorithm value, The direction in case of max node or None in min mode)
         """
+        if time.time() - start_time >= time_limit:
+            raise Timeout
+
         if self.goal(state) or depth == 0:
             if maximizing_player:
                 return self.utility(state), 000   # TODO: replace 000, "direction in case of max node"???

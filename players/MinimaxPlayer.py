@@ -6,7 +6,9 @@ from players.AbstractPlayer import AbstractPlayer
 import time
 import numpy as np
 from SearchAlgos import MiniMax
+from SearchAlgos import Timeout
 import utils
+
 
 class Player(AbstractPlayer):
     def __init__(self, game_time):
@@ -79,36 +81,27 @@ class Player(AbstractPlayer):
     def _iterative_minimax(self, start_state, time_limit, minimax):
         start = time.time()
         depth = 1
-        ret_val, direction = minimax.search(start_state, depth, True)
-        end = time.time()
-        last_calc_time = end - start
-        time_for_node = last_calc_time / 2
-        depth += 1
-        needed_time = last_calc_time + pow(3, depth) * time_for_node
 
-        while needed_time + time.time() - start < time_limit:
-            start = time.time()
-            ret_val, direction = minimax.search(start_state, depth, True)
-            end = time.time()
-            last_calc_time = end - start
-            depth += 1
-            needed_time = last_calc_time + pow(3, depth) * time_for_node
+        try:
+            while time.time() - start < time_limit:
+                ret_val, direction = minimax.search(start_state, depth, True)
+                depth += 1
+        except Timeout:
+            cell, soldier_that_moved = direction
 
-        cell, soldier_that_moved = direction
         self.my_pos[soldier_that_moved] = cell
         self.board[cell] = 1
-
         rival_cell = -1 if not self.is_mill(cell) else self._make_mill_get_rival_cell()
         return cell, soldier_that_moved, rival_cell
 
     def _stage_1_move(self, time_limit) -> tuple:
         start_state = self.board
-        minimax = MiniMax(self._succ_stage1)
+        minimax = MiniMax(self._succ_stage1) # add param utility !!!
         return self._iterative_minimax(start_state, time_limit, minimax)
 
     def _stage_2_move(self, time_limit) -> tuple:
         start_state = self.board
-        minimax = MiniMax(sself._succ_stage2, None, goal???)
+        minimax = MiniMax(self._succ_stage2, None, goal???) # add param utility !!!
         return self._iterative_minimax(start_state, time_limit, minimax)
 
 

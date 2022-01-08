@@ -6,6 +6,7 @@ from players.AbstractPlayer import AbstractPlayer
 import time
 import numpy as np
 from SearchAlgos import AlphaBeta
+from SearchAlgos import Timeout
 import utils
 
 class Player(AbstractPlayer):
@@ -75,39 +76,30 @@ class Player(AbstractPlayer):
 
     ########## helper functions in class ##########
     #TODO: add here helper functions in class, if needed
-    def _iterative_alphabeta(self, start_state, time_limit, minimax):
+    def _iterative_alphabeta(self, start_state, time_limit, alphabeta):
         start = time.time()
         depth = 1
-        ret_val, direction = minimax.search(start_state, depth, True)
-        end = time.time()
-        last_calc_time = end - start
-        time_for_node = last_calc_time / 2
-        depth += 1
-        needed_time = last_calc_time + pow(3, depth) * time_for_node
 
-        while needed_time + time.time() - start < time_limit:
-            start = time.time()
-            ret_val, direction = minimax.search(start_state, depth, True)
-            end = time.time()
-            last_calc_time = end - start
-            depth += 1
-            needed_time = last_calc_time + pow(3, depth) * time_for_node
+        try:
+            while time.time() - start < time_limit:
+                ret_val, direction = alphabeta.search(start_state, depth, True)
+                depth += 1
+        except Timeout:
+            cell, soldier_that_moved = direction
 
-        cell, soldier_that_moved = direction
         self.my_pos[soldier_that_moved] = cell
         self.board[cell] = 1
-
         rival_cell = -1 if not self.is_mill(cell) else self._make_mill_get_rival_cell()
         return cell, soldier_that_moved, rival_cell
 
     def _stage_1_move(self, time_limit) -> tuple:
         start_state = self.board
-        alphabeta = AlphaBeta(self._succ_stage1)
+        alphabeta = AlphaBeta(self._succ_stage1) # add param utility !!!
         return self._iterative_alphabeta(start_state, time_limit, alphabeta)
 
     def _stage_2_move(self, time_limit) -> tuple:
         start_state = self.board
-        alphabeta = AlphaBeta(self._succ_stage2, None, goal???)
+        alphabeta = AlphaBeta(self._succ_stage2, None, goal???) # add param utility !!!
         return self._iterative_alphabeta(start_state, time_limit, alphabeta)
 
 
