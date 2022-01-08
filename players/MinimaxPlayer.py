@@ -89,17 +89,17 @@ class Player(AbstractPlayer):
     def _iterative_minimax(self, start_state, time_limit, minimax):
         start = time.time()
         depth = 1
-        ret_val, cell, new_my_pos = minimax.search(start_state, depth, True, time_limit, start)
-       # cell, new_my_pos = direction
-        soldier_that_moved = np.where(self.my_pos != new_my_pos)[0]
+        ret_val, next_game_state = minimax.search(start_state, depth, True, time_limit, start)
+        cell = next_game_state.player_move
+        soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
 
         try:
             while time.time() - start < time_limit:
-                ret_val, cell, new_my_pos = minimax.search(start_state, depth, True, time_limit, start)
-                #cell, new_my_pos = direction
+                ret_val, next_game_state = minimax.search(start_state, depth, True, time_limit, start)
+                cell = next_game_state.player_move
+                soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0]
                 depth += 1
         except Timeout:
-            soldier_that_moved = np.where(self.my_pos != new_my_pos)[0]
             self.my_pos[soldier_that_moved] = cell
             self.board[cell] = 1
 

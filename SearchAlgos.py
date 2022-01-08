@@ -130,7 +130,7 @@ def diff_in_number_of_blocked_soldiers(game_state):
 
 
 def diff_in_number_of_soldiers(game_state):
-    return len(np.where(game_state.board == 1)) - len(np.where(game_state.board == 2))
+    return len(np.where(game_state.board == 1)[0]) - len(np.where(game_state.board == 2)[0])
 
 
 def is_incomplete_mill(board, player, pos1, pos2, pos3):
@@ -367,14 +367,14 @@ def is_winning_conf(game_state):
     :return: 1 if the state is winning for the player, -1 if losing, 0 otherwise
     """
     if game_state.curr_player == 1:
-        if (len(np.where(game_state.board == 2)) < 3 or
-                number_of_blocked_soldiers_per_player(game_state, 2) == len(np.where(game_state.board == 2))):
+        if (len(np.where(game_state.board == 2)[0]) < 3 or
+                number_of_blocked_soldiers_per_player(game_state, 2) == len(np.where(game_state.board == 2)[0])):
             return 1
         else:
             return 0
     else:
-        if (len(np.where(game_state.board == 1)) < 3 or
-                number_of_blocked_soldiers_per_player(game_state, 1) == len(np.where(game_state.board == 1))):
+        if (len(np.where(game_state.board == 1)[0]) < 3 or
+                number_of_blocked_soldiers_per_player(game_state, 1) == len(np.where(game_state.board == 1)[0])):
             return -1
         else:
             return 0
@@ -403,7 +403,7 @@ def succ_stage1(game_state):
         if new_game_state.board[cell] == 0:
             new_game_state.board[cell] = new_game_state.curr_player
             new_game_state.player_move = cell
-            num_of_soldier = np.where(new_game_state.my_pos == -1)[0]
+            num_of_soldier = np.where(new_game_state.my_pos == -1)[0][0]
             if new_game_state.curr_player == 1:
                 new_game_state.my_pos[num_of_soldier] = cell
             else:
@@ -429,7 +429,7 @@ def succ_stage2(game_state):
                     new_game_state.board[d] = new_game_state.curr_player
                     new_game_state.player_move = d
 
-                    num_of_soldier = np.where(new_game_state.my_pos == cell)[0]
+                    num_of_soldier = np.where(new_game_state.my_pos == cell)[0][0]
                     if new_game_state.curr_player == 1:
                         new_game_state.my_pos[num_of_soldier] = d
                     else:
@@ -448,7 +448,7 @@ def succ_stage2(game_state):
 
 ### goal func ###
 def goal_func_stage1(game_state):
-    return len(np.where(game_state.my_pos == -1)) == 0 and len(np.where(game_state.rival_pos == -1)) == 0
+    return len(np.where(game_state.my_pos == -1)[0]) == 0 and len(np.where(game_state.rival_pos == -1)[0]) == 0
 
 
 class SearchAlgos:
@@ -483,7 +483,7 @@ class MiniMax(SearchAlgos):
 
         if abs(self.goal(game_state)) or depth == 0:
             if maximizing_player:
-                return self.utility(game_state), game_state.player_move, game_state.my_pos
+                return self.utility(game_state), game_state
             else:
                 return self.utility(game_state), None
 
@@ -491,17 +491,20 @@ class MiniMax(SearchAlgos):
 
         if maximizing_player:
             cur_max = -np.inf
-            for c in children:
-                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)[0]
-                cur_max = max(value, cur_max)
-            return cur_max
+            next_game_state = None
+            for c in self.succ(game_state):
+                ret_val = self.search(c, depth-1, not maximizing_player, time_limit, start_time)
+                if ret_val[0] > cur_max:
+                    cur_max = ret_val[0]
+                    next_game_state = copy.deepcopy(c)
+            return cur_max, next_game_state
 
-        else:
+        else:  # להוסיף פה גם next_game_state או שסבבה להחזיר none
             cur_min = np.inf
             for c in children:
                 value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)[0]
                 cur_min = min(value, cur_min)
-            return cur_min
+            return cur_min, None
 
 
 class AlphaBeta(SearchAlgos):
