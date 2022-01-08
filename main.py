@@ -30,8 +30,8 @@ if __name__ == "__main__":
         raise Exception('Wrong time arguments.')
 
     # Players inherit from AbstractPlayer - this allows maximum flexibility and modularity
-    player_1_type = 'players.' + args.player1
-    player_2_type = 'players.' + args.player2
+    player_1_type = 'players.' + 'LivePlayer'
+    player_2_type = 'players.' + 'MinimaxPlayer'
     game_time = args.game_time
     __import__(player_1_type)
     __import__(player_2_type)
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # create game with the given args
     game = GameWrapper(player_1=player_1, player_2=player_2,players_positions=[np.full(9, -1),np.full(9, -1)],
                     print_game_in_terminal=True,
-                    time_to_make_a_move=args.move_time, 
+                    time_to_make_a_move=args.move_time,
                     game_time=game_time)
     # start playing!
     game.run_game()

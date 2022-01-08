@@ -7,7 +7,8 @@ import time
 import numpy as np
 from SearchAlgos import AlphaBeta
 from SearchAlgos import Timeout
-import utils
+from SearchAlgos import GameState
+import SearchAlgos
 
 class Player(AbstractPlayer):
     def __init__(self, game_time):
@@ -93,33 +94,15 @@ class Player(AbstractPlayer):
         return cell, soldier_that_moved, rival_cell
 
     def _stage_1_move(self, time_limit) -> tuple:
-        start_state = self.board
-        alphabeta = AlphaBeta(self._succ_stage1) # add param utility !!!
+        start_state = GameState(self.board, 1)
+        alphabeta = AlphaBeta(SearchAlgos.heuristic_stage1, SearchAlgos.succ_stage1)
         return self._iterative_alphabeta(start_state, time_limit, alphabeta)
 
     def _stage_2_move(self, time_limit) -> tuple:
-        start_state = self.board
-        alphabeta = AlphaBeta(self._succ_stage2, None, goal???) # add param utility !!!
+        start_state = GameState(self.board, 1)
+        alphabeta = AlphaBeta(SearchAlgos.heuristic_stage2, SearchAlgos.succ_stage2)
         return self._iterative_alphabeta(start_state, time_limit, alphabeta)
 
 
     ########## helper functions for AlphaBeta algorithm ##########
     #TODO: add here the utility, succ, and perform_move functions used in AlphaBeta algorithm
-
-    def _succ_stage1(self, board, player):
-        for cell in range(23):
-            if board[cell] == 0:
-                board[cell] = player
-                yield board
-                board[cell] = 0
-
-    def _succ_stage2(self, board, player):
-        for cell in range(23):
-            if board[cell] == player:
-                board[cell] = 0
-                for d in utils.get_directions(cell):
-                    if board[d] == 0:
-                        board[d] = player
-                        yield board
-                        board[d] = 0
-                board[cell] = player

@@ -1,11 +1,9 @@
 """Search Algos: MiniMax, AlphaBeta
 """
-#TODO: you can import more modules, if needed
-#TODO: update ALPHA_VALUE_INIT, BETA_VALUE_INIT in utils
 import time
 import numpy as np
-from Game import Game as game
 import utils
+import copy
 ALPHA_VALUE_INIT = -np.inf
 BETA_VALUE_INIT = np.inf # !!!!!
 
@@ -15,15 +13,17 @@ class Timeout(Exception):
 
 
 class GameState:
-    def __init__(self, board, curr_player, player_move):
+    def __init__(self, board, curr_player, my_pos, rival_pos, player_move=None):
         """
         :param board: board state
         :param curr_player: player who performed last move, 1 - maximizer, 2 - opponent
-        :param player_move: position where player placed a solider
+        :param player_move: position where player placed a solider - new cell
         """
         self.board = board
         self.curr_player = curr_player
         self.player_move = player_move
+        self.my_pos = my_pos
+        self.rival_pos = rival_pos
 
 
 ### Functions to calc heuristic ###
@@ -65,7 +65,7 @@ def closed_mill(game_state):
     1 if a morris was closed in the last move by the player (and an opponent’s piece should be grabbed in this move),
      -1 if a morris was closed by the opponent in the last move, 0 otherwise
     """
-    if is_pos_in_mill(game_state.player_move, game_state.curr_player):
+    if is_pos_in_mill(game_state.board, game_state.player_move):
         return 1 if game_state.curr_player == 1 else -1
     else:
         return 0
@@ -75,39 +75,39 @@ def is_mill(board, player, pos1, pos2, pos3):
     return board[pos1] == player and board[pos2] == player and board[pos3] == player
 
 
-def number_of_mills_per_player(game_state, player):
+def number_of_mills_per_player(game_state, player) -> int:
     """
     :return: number of mills of the player
     """
-    return (
-            (is_mill(game_state.board, player, 0, 1, 2)) +
-            (is_mill(game_state.board, player, 8, 9, 10)) +
-            (is_mill(game_state.board, player, 16, 17, 18)) +
-            (is_mill(game_state.board, player, 3, 11, 19)) +
-            (is_mill(game_state.board, player, 20, 12, 4)) +
-            (is_mill(game_state.board, player, 21, 22, 23)) +
-            (is_mill(game_state.board, player, 13, 14, 15)) +
-            (is_mill(game_state.board, player, 5, 6, 7)) +
-            (is_mill(game_state.board, player, 0, 3, 5)) +
-            (is_mill(game_state.board, player, 8, 11, 13)) +
-            (is_mill(game_state.board, player, 16, 19, 21)) +
-            (is_mill(game_state.board, player, 1, 9, 17)) +
-            (is_mill(game_state.board, player, 22, 14, 6)) +
-            (is_mill(game_state.board, player, 18, 20, 23)) +
-            (is_mill(game_state.board, player, 10, 12, 15)) +
+    res = (is_mill(game_state.board, player, 0, 1, 2)) + \
+            (is_mill(game_state.board, player, 8, 9, 10)) + \
+            (is_mill(game_state.board, player, 16, 17, 18)) + \
+            (is_mill(game_state.board, player, 3, 11, 19)) + \
+            (is_mill(game_state.board, player, 20, 12, 4)) + \
+            (is_mill(game_state.board, player, 21, 22, 23)) + \
+            (is_mill(game_state.board, player, 13, 14, 15)) + \
+            (is_mill(game_state.board, player, 5, 6, 7)) + \
+            (is_mill(game_state.board, player, 0, 3, 5)) + \
+            (is_mill(game_state.board, player, 8, 11, 13)) + \
+            (is_mill(game_state.board, player, 16, 19, 21)) + \
+            (is_mill(game_state.board, player, 1, 9, 17)) + \
+            (is_mill(game_state.board, player, 22, 14, 6)) + \
+            (is_mill(game_state.board, player, 18, 20, 23)) + \
+            (is_mill(game_state.board, player, 10, 12, 15)) + \
             (is_mill(game_state.board, player, 2, 4, 7))
-    )
+    return res
 
 
 def diff_in_number_of_mills(game_state):
     """
     :return: Difference between the number of player's and opponent’s mills
     """
-    return number_of_mills_per_player(game_state, 1) - number_of_mills_per_player(game_state, 2)
+    return int(number_of_mills_per_player(game_state, 1)) - int(number_of_mills_per_player(game_state, 2))
 
 
 def is_blocked_solider(board, pos):
-    for d in utils.get_directions(pos):
+    directions = utils.get_directions(pos)
+    for d in directions:
         if board[d] == 0:
             return False
     return True
@@ -115,7 +115,8 @@ def is_blocked_solider(board, pos):
 
 def number_of_blocked_soldiers_per_player(game_state, player):
     res = 0
-    for pos in np.where(game_state.board == player):
+    positions = np.where(game_state.board == player)
+    for pos in positions[0]:
         res += is_blocked_solider(game_state.board, pos)
     return res
 
@@ -165,8 +166,7 @@ def diff_in_number_of_incomplete_mills(game_state):
     """
     :return: Difference between the number of player's and opponent’s 2 piece configurations
     """
-    return number_of_incomplete_mills_per_player(game_state, 1) - \
-           number_of_incomplete_mills_per_player(game_state, 2)
+    return number_of_incomplete_mills_per_player(game_state, 1) - number_of_incomplete_mills_per_player(game_state, 2)
 
 
 def is_two_way_incomplete_mill(board, pos):
@@ -314,9 +314,9 @@ def number_of_double_mills_per_player(game_state, player):
 
     if is_mill(game_state.board, player, 8, 11, 13):
         res += ((b[9] == 0 and b[1] == p and b[17] == p) or
-               (b[3] == 0 and b[0] == p and b[5] == p) or
-               (b[19] == 0 and b[16] == p and b[21] == p) or
-               (b[14] == 0 and b[6] == p and b[22] == p))
+                (b[3] == 0 and b[0] == p and b[5] == p) or
+                (b[19] == 0 and b[16] == p and b[21] == p) or
+                (b[14] == 0 and b[6] == p and b[22] == p))
 
     if is_mill(game_state.board, player, 16, 19, 21):
         res += ((b[17] == 0 and b[9] == p and b[1] == p) or
@@ -345,10 +345,10 @@ def number_of_double_mills_per_player(game_state, player):
                 (b[22] == 0 and b[14] == p and b[6] == p))
 
     if is_mill(game_state.board, player, 10, 12, 15):
-       res += ((b[9] == 0 and b[1] == p and b[17] == p) or
-               (b[20] == 0 and b[18] == p and b[23] == p) or
-               (b[4] == 0 and b[2] == p and b[7] == p) or
-               (b[14] == 0 and b[6] == p and b[22] == p))
+        res += ((b[9] == 0 and b[1] == p and b[17] == p) or
+                (b[20] == 0 and b[18] == p and b[23] == p) or
+                (b[4] == 0 and b[2] == p and b[7] == p) or
+                (b[14] == 0 and b[6] == p and b[22] == p))
 
     if is_mill(game_state.board, player, 2, 4, 7):
         res += ((b[1] == 0 and b[9] == p and b[17] == p) or
@@ -394,20 +394,74 @@ def heuristic_stage2(game_state):
     return h
 
 
+### succ funcs ###
+
+def succ_stage1(game_state):
+    new_game_state = copy.deepcopy(game_state)
+    new_game_state.curr_player = 3 - game_state.curr_player
+    for cell in range(23):
+        if new_game_state.board[cell] == 0:
+            new_game_state.board[cell] = new_game_state.curr_player
+            new_game_state.player_move = cell
+            num_of_soldier = np.where(new_game_state.my_pos == -1)[0]
+            if new_game_state.curr_player == 1:
+                new_game_state.my_pos[num_of_soldier] = cell
+            else:
+                new_game_state.rival_pos[num_of_soldier] = cell
+
+            yield new_game_state
+
+            new_game_state.board[cell] = 0
+            if new_game_state.curr_player == 1:
+                new_game_state.my_pos[num_of_soldier] = -1
+            else:
+                new_game_state.rival_pos[num_of_soldier] = -1
+
+
+def succ_stage2(game_state):
+    new_game_state = copy.deepcopy(game_state)
+    new_game_state.curr_player = 3 - game_state.curr_player
+    for cell in range(23):
+        if new_game_state.board[cell] == new_game_state.curr_player:
+            new_game_state.board[cell] = 0
+            for d in utils.get_directions(cell):
+                if new_game_state.board[d] == 0:
+                    new_game_state.board[d] = new_game_state.curr_player
+                    new_game_state.player_move = d
+
+                    num_of_soldier = np.where(new_game_state.my_pos == cell)[0]
+                    if new_game_state.curr_player == 1:
+                        new_game_state.my_pos[num_of_soldier] = d
+                    else:
+                        new_game_state.rival_pos[num_of_soldier] = d
+
+                    yield new_game_state
+
+                    new_game_state.board[d] = 0
+                    if new_game_state.curr_player == 1:
+                        new_game_state.my_pos[num_of_soldier] = cell
+                    else:
+                        new_game_state.rival_pos[num_of_soldier] = cell
+
+            new_game_state.board[cell] = new_game_state.curr_player
+
+
+### goal func ###
+def goal_func_stage1(game_state):
+    return len(np.where(game_state.my_pos == -1)) == 0 and len(np.where(game_state.rival_pos == -1)) == 0
+
+
 class SearchAlgos:
-    def __init__(self, utility, succ):
+    def __init__(self, utility, succ, goal):
         """The constructor for all the search algos.
         You can code these functions as you like to, 
         and use them in MiniMax and AlphaBeta algos as learned in class
         :param utility: The utility function.
-        :param succ: The succesor function.
-        :param perform_move: The perform move function.
-        :param goal: function that check if you are in a goal state.
+        :param succ: The successor function.
         """
         self.utility = utility
         self.succ = succ
-       # self.perform_move = perform_move
-        self.goal = is_winning_conf
+        self.goal = goal
 
     def search(self, game_state, depth, maximizing_player, time_limit, start_time):
         pass
@@ -429,23 +483,23 @@ class MiniMax(SearchAlgos):
 
         if abs(self.goal(game_state)) or depth == 0:
             if maximizing_player:
-                return self.utility(game_state), 000   # TODO: replace 000, "direction in case of max node"???
+                return self.utility(game_state), game_state.player_move, game_state.my_pos
             else:
                 return self.utility(game_state), None
 
-        children = self.succ(game_state, 2 - maximizing_player)
+        children = self.succ(game_state)
 
         if maximizing_player:
             cur_max = -np.inf
             for c in children:
-                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)
+                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)[0]
                 cur_max = max(value, cur_max)
             return cur_max
 
         else:
             cur_min = np.inf
             for c in children:
-                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)
+                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)[0]
                 cur_min = min(value, cur_min)
             return cur_min
 
@@ -493,5 +547,3 @@ class AlphaBeta(SearchAlgos):
                 if cur_min <= alpha:
                     return -np.inf
             return cur_min
-
-
