@@ -4,7 +4,7 @@
 #TODO: update ALPHA_VALUE_INIT, BETA_VALUE_INIT in utils
 import time
 import numpy as np
-import Game as game
+from Game import Game as game
 import utils
 ALPHA_VALUE_INIT = -np.inf
 BETA_VALUE_INIT = np.inf # !!!!!
@@ -26,8 +26,376 @@ class GameState:
         self.player_move = player_move
 
 
+### Functions to calc heuristic ###
+
+def is_pos_in_mill(board, pos):
+    p = board[pos]
+    b = board
+    mill = [
+        ((b[1] == p and b[2] == p) or (b[3] == p and b[5] == p)),
+        ((b[0] == p and b[2] == p) or (b[9] == p and b[17] == p)),
+        ((b[0] == p and b[1] == p) or (b[4] == p and b[7] == p)),
+        ((b[0] == p and b[5] == p) or (b[11] == p and b[19] == p)),
+        ((b[2] == p and b[7] == p) or (b[12] == p and b[20] == p)),
+        ((b[0] == p and b[3] == p) or (b[6] == p and b[7] == p)),
+        ((b[5] == p and b[7] == p) or (b[14] == p and b[22] == p)),
+        ((b[5] == p and b[6] == p) or (b[2] == p and b[4] == p)),
+        ((b[9] == p and b[10] == p) or (b[11] == p and b[13] == p)),
+        ((b[1] == p and b[17] == p) or (b[8] == p and b[10] == p)),
+        ((b[8] == p and b[9] == p) or (b[12] == p and b[15] == p)),
+        ((b[3] == p and b[19] == p) or (b[8] == p and b[13] == p)),
+        ((b[10] == p and b[15] == p) or (b[4] == p and b[20] == p)),
+        ((b[8] == p and b[11] == p) or (b[14] == p and b[15] == p)),
+        ((b[13] == p and b[15] == p) or (b[6] == p and b[22] == p)),
+        ((b[10] == p and b[12] == p) or (b[13] == p and b[14] == p)),
+        ((b[17] == p and b[18] == p) or (b[19] == p and b[21] == p)),
+        ((b[1] == p and b[9] == p) or (b[16] == p and b[18] == p)),
+        ((b[16] == p and b[17] == p) or (b[20] == p and b[23] == p)),
+        ((b[3] == p and b[11] == p) or (b[16] == p and b[21] == p)),
+        ((b[4] == p and b[12] == p) or (b[18] == p and b[23] == p)),
+        ((b[16] == p and b[19] == p) or (b[22] == p and b[23] == p)),
+        ((b[21] == p and b[23] == p) or (b[6] == p and b[14] == p)),
+        ((b[18] == p and b[20] == p) or (b[21] == p and b[22] == p))
+    ]
+    return mill[pos]
+
+
+def closed_mill(game_state):
+    """
+    1 if a morris was closed in the last move by the player (and an opponent’s piece should be grabbed in this move),
+     -1 if a morris was closed by the opponent in the last move, 0 otherwise
+    """
+    if is_pos_in_mill(game_state.player_move, game_state.curr_player):
+        return 1 if game_state.curr_player == 1 else -1
+    else:
+        return 0
+
+
+def is_mill(board, player, pos1, pos2, pos3):
+    return board[pos1] == player and board[pos2] == player and board[pos3] == player
+
+
+def number_of_mills_per_player(game_state, player):
+    """
+    :return: number of mills of the player
+    """
+    return (
+            (is_mill(game_state.board, player, 0, 1, 2)) +
+            (is_mill(game_state.board, player, 8, 9, 10)) +
+            (is_mill(game_state.board, player, 16, 17, 18)) +
+            (is_mill(game_state.board, player, 3, 11, 19)) +
+            (is_mill(game_state.board, player, 20, 12, 4)) +
+            (is_mill(game_state.board, player, 21, 22, 23)) +
+            (is_mill(game_state.board, player, 13, 14, 15)) +
+            (is_mill(game_state.board, player, 5, 6, 7)) +
+            (is_mill(game_state.board, player, 0, 3, 5)) +
+            (is_mill(game_state.board, player, 8, 11, 13)) +
+            (is_mill(game_state.board, player, 16, 19, 21)) +
+            (is_mill(game_state.board, player, 1, 9, 17)) +
+            (is_mill(game_state.board, player, 22, 14, 6)) +
+            (is_mill(game_state.board, player, 18, 20, 23)) +
+            (is_mill(game_state.board, player, 10, 12, 15)) +
+            (is_mill(game_state.board, player, 2, 4, 7))
+    )
+
+
+def diff_in_number_of_mills(game_state):
+    """
+    :return: Difference between the number of player's and opponent’s mills
+    """
+    return number_of_mills_per_player(game_state, 1) - number_of_mills_per_player(game_state, 2)
+
+
+def is_blocked_solider(board, pos):
+    for d in utils.get_directions(pos):
+        if board[d] == 0:
+            return False
+    return True
+
+
+def number_of_blocked_soldiers_per_player(game_state, player):
+    res = 0
+    for pos in np.where(game_state.board == player):
+        res += is_blocked_solider(game_state.board, pos)
+    return res
+
+
+def diff_in_number_of_blocked_soldiers(game_state):
+    """
+    :return: Difference between the number of opponent’s and player's blocked soldiers
+    """
+    return number_of_blocked_soldiers_per_player(game_state, 2) - number_of_blocked_soldiers_per_player(
+        game_state, 1)
+
+
+def diff_in_number_of_soldiers(game_state):
+    return len(np.where(game_state.board == 1)) - len(np.where(game_state.board == 2))
+
+
+def is_incomplete_mill(board, player, pos1, pos2, pos3):
+    if ((board[pos1] == 0 and board[pos2] == player and board[pos3] == player) or
+            (board[pos2] == 0 and board[pos1] == player and board[pos3] == player) or
+            (board[pos3] == 0 and board[pos1] == player and board[pos2] == player)):
+        return True
+    return False
+
+
+def number_of_incomplete_mills_per_player(game_state, player):
+    return (
+            (is_incomplete_mill(game_state.board, player, 0, 1, 2)) +
+            (is_incomplete_mill(game_state.board, player, 8, 9, 10)) +
+            (is_incomplete_mill(game_state.board, player, 16, 17, 18)) +
+            (is_incomplete_mill(game_state.board, player, 3, 11, 19)) +
+            (is_incomplete_mill(game_state.board, player, 20, 12, 4)) +
+            (is_incomplete_mill(game_state.board, player, 21, 22, 23)) +
+            (is_incomplete_mill(game_state.board, player, 13, 14, 15)) +
+            (is_incomplete_mill(game_state.board, player, 5, 6, 7)) +
+            (is_incomplete_mill(game_state.board, player, 0, 3, 5)) +
+            (is_incomplete_mill(game_state.board, player, 8, 11, 13)) +
+            (is_incomplete_mill(game_state.board, player, 16, 19, 21)) +
+            (is_incomplete_mill(game_state.board, player, 1, 9, 17)) +
+            (is_incomplete_mill(game_state.board, player, 22, 14, 6)) +
+            (is_incomplete_mill(game_state.board, player, 18, 20, 23)) +
+            (is_incomplete_mill(game_state.board, player, 10, 12, 15)) +
+            (is_incomplete_mill(game_state.board, player, 2, 4, 7))
+    )
+
+
+def diff_in_number_of_incomplete_mills(game_state):
+    """
+    :return: Difference between the number of player's and opponent’s 2 piece configurations
+    """
+    return number_of_incomplete_mills_per_player(game_state, 1) - \
+           number_of_incomplete_mills_per_player(game_state, 2)
+
+
+def is_two_way_incomplete_mill(board, pos):
+    p = board[pos]
+    if pos == 0:
+        return board[1] == p and board[3] == p and board[2] == 0 and board[5] == 0
+    if pos == 1:
+        return ((board[0] == p and board[9] == p and board[2] == 0 and board[17] == 0) or
+                (board[2] == p and board[9] == p and board[0] == 0 and board[17] == 0))
+    if pos == 2:
+        return board[1] == p and board[4] == p and board[0] == 0 and board[7] == 0
+    if pos == 3:
+        return ((board[0] == p and board[11] == p and board[5] == 0 and board[19] == 0) or
+                (board[5] == p and board[11] == p and board[0] == 0 and board[19] == 0))
+    if pos == 4:
+        return ((board[7] == p and board[12] == p and board[2] == 0 and board[20] == 0) or
+                (board[2] == p and board[12] == p and board[7] == 0 and board[20] == 0))
+    if pos == 5:
+        return board[3] == p and board[6] == p and board[0] == 0 and board[7] == 0
+    if pos == 6:
+        return ((board[5] == p and board[14] == p and board[7] == 0 and board[22] == 0) or
+                (board[7] == p and board[14] == p and board[5] == 0 and board[22] == 0))
+    if pos == 7:
+        return board[4] == p and board[6] == p and board[2] == 0 and board[5] == 0
+    if pos == 8:
+        return board[9] == p and board[11] == p and board[10] == 0 and board[13] == 0
+    if pos == 9:
+        return ((board[1] == p and board[10] == p and board[17] == 0 and board[8] == 0) or
+                (board[10] == p and board[17] == p and board[1] == 0 and board[8] == 0) or
+                (board[17] == p and board[8] == p and board[1] == 0 and board[10] == 0) or
+                (board[8] == p and board[1] == p and board[10] == 0 and board[17] == 0))
+    if pos == 10:
+        return board[9] == p and board[12] == p and board[8] == 0 and board[15] == 0
+    if pos == 11:
+        return ((board[3] == p and board[8] == p and board[13] == 0 and board[19] == 0) or
+                (board[8] == p and board[19] == p and board[3] == 0 and board[13] == 0) or
+                (board[13] == p and board[19] == p and board[3] == 0 and board[8] == 0) or
+                (board[3] == p and board[13] == p and board[8] == 0 and board[19] == 0))
+    if pos == 12:
+        return ((board[10] == p and board[4] == p and board[15] == 0 and board[20] == 0) or
+                (board[4] == p and board[15] == p and board[10] == 0 and board[20] == 0) or
+                (board[15] == p and board[20] == p and board[4] == 0 and board[10] == 0) or
+                (board[20] == p and board[10] == p and board[4] == 0 and board[15] == 0))
+    if pos == 13:
+        return board[11] == p and board[14] == p and board[8] == 0 and board[15] == 0
+    if pos == 14:
+        return ((board[6] == p and board[13] == p and board[15] == 0 and board[22] == 0) or
+                (board[13] == p and board[22] == p and board[6] == 0 and board[15] == 0) or
+                (board[15] == p and board[22] == p and board[6] == 0 and board[13] == 0) or
+                (board[6] == p and board[15] == p and board[13] == 0 and board[22] == 0))
+    if pos == 15:
+        return board[12] == p and board[14] == p and board[10] == 0 and board[13] == 0
+    if pos == 16:
+        return board[17] == p and board[19] == p and board[18] == 0 and board[21] == 0
+    if pos == 17:
+        return ((board[9] == p and board[18] == p and board[1] == 0 and board[16] == 0) or
+                (board[9] == p and board[16] == p and board[1] == 0 and board[18] == 0))
+    if pos == 18:
+        return board[17] == p and board[20] == p and board[16] == 0 and board[23] == 0
+    if pos == 19:
+        return ((board[11] == p and board[16] == p and board[3] == 0 and board[21] == 0) or
+                (board[11] == p and board[21] == p and board[3] == 0 and board[16] == 0))
+    if pos == 20:
+        return ((board[12] == p and board[18] == p and board[4] == 0 and board[23] == 0) or
+                (board[12] == p and board[23] == p and board[4] == 0 and board[18] == 0))
+    if pos == 21:
+        return board[19] == p and board[22] == p and board[16] == 0 and board[23] == 0
+    if pos == 22:
+        return ((board[21] == p and board[14] == p and board[6] == 0 and board[23] == 0) or
+                (board[14] == p and board[23] == p and board[6] == 0 and board[21] == 0))
+    if pos == 23:
+        return board[22] == p and board[20] == p and board[18] == 0 and board[21] == 0
+
+
+def number_of_two_way_incomplete_mill_per_player(game_state, player):
+    res = 0
+    for pos in range(23):
+        if game_state.board[pos] == player:
+            res += is_two_way_incomplete_mill(game_state.board, pos)
+    return res
+
+
+def diff_in_number_of_two_way_incomplete_mill(game_state):
+    return number_of_two_way_incomplete_mill_per_player(game_state, 1) - \
+           number_of_two_way_incomplete_mill_per_player(game_state, 2)
+
+
+def number_of_double_mills_per_player(game_state, player):
+    b = game_state.board
+    p = player
+    res = 0
+
+    if is_mill(game_state.board, player, 0, 1, 2):
+        res += ((b[3] == 0 and b[11] == p and b[19] == p) or
+                (b[9] == 0 and b[8] == p and b[10] == p) or
+                (b[4] == 0 and b[12] == p and b[20] == p))
+
+    if is_mill(game_state.board, player, 8, 9, 10):
+        res += ((b[11] == 0 and b[3] == p and b[19] == p) or
+                (b[1] == 0 and b[0] == p and b[2] == p) or
+                (b[17] == 0 and b[16] == p and b[18] == p) or
+                (b[12] == 0 and b[20] == p and b[4] == p))
+
+    if is_mill(game_state.board, player, 16, 17, 18):
+        res += ((b[19] == 0 and b[3] == p and b[11] == p) or
+                (b[9] == 0 and b[8] == p and b[10] == p) or
+                (b[20] == 0 and b[12] == p and b[4] == p))
+
+    if is_mill(game_state.board, player, 3, 11, 19):
+        res += ((b[0] == 0 and b[1] == p and b[2] == p) or
+                (b[5] == 0 and b[6] == p and b[7] == p) or
+                (b[8] == 0 and b[9] == p and b[10] == p) or
+                (b[13] == 0 and b[14] == p and b[15] == p) or
+                (b[16] == 0 and b[17] == p and b[18] == p) or
+                (b[21] == 0 and b[22] == p and b[23] == p))
+
+    if is_mill(game_state.board, player, 20, 12, 4):
+        res += ((b[2] == 0 and b[1] == p and b[0] == p) or
+                (b[7] == 0 and b[6] == p and b[5] == p) or
+                (b[10] == 0 and b[9] == p and b[8] == p) or
+                (b[15] == 0 and b[14] == p and b[13] == p) or
+                (b[18] == 0 and b[17] == p and b[16] == p) or
+                (b[23] == 0 and b[22] == p and b[21] == p))
+
+    if is_mill(game_state.board, player, 21, 22, 23):
+        res += ((b[19] == 0 and b[3] == p and b[11] == p) or
+                (b[14] == 0 and b[13] == p and b[15] == p) or
+                (b[20] == 0 and b[12] == p and b[4] == p))
+
+    if is_mill(game_state.board, player, 13, 14, 15):
+        res += ((b[11] == 0 and b[3] == p and b[19] == p) or
+                (b[22] == 0 and b[21] == p and b[23] == p) or
+                (b[6] == 0 and b[5] == p and b[7] == p) or
+                (b[12] == 0 and b[20] == p and b[4] == p))
+
+    if is_mill(game_state.board, player, 5, 6, 7):
+        res += ((b[3] == 0 and b[11] == p and b[19] == p) or
+                (b[14] == 0 and b[13] == p and b[15] == p) or
+                (b[4] == 0 and b[12] == p and b[20] == p))
+
+    if is_mill(game_state.board, player, 0, 3, 5):
+        res += ((b[1] == 0 and b[9] == p and b[17] == p) or
+                (b[11] == 0 and b[8] == p and b[13] == p) or
+                (b[6] == 0 and b[14] == p and b[22] == p))
+
+    if is_mill(game_state.board, player, 8, 11, 13):
+        res += ((b[9] == 0 and b[1] == p and b[17] == p) or
+               (b[3] == 0 and b[0] == p and b[5] == p) or
+               (b[19] == 0 and b[16] == p and b[21] == p) or
+               (b[14] == 0 and b[6] == p and b[22] == p))
+
+    if is_mill(game_state.board, player, 16, 19, 21):
+        res += ((b[17] == 0 and b[9] == p and b[1] == p) or
+                (b[11] == 0 and b[8] == p and b[13] == p) or
+                (b[22] == 0 and b[14] == p and b[6] == p))
+
+    if is_mill(game_state.board, player, 1, 9, 17):
+        res += ((b[0] == 0 and b[3] == p and b[5] == p) or
+                (b[2] == 0 and b[4] == p and b[7] == p) or
+                (b[8] == 0 and b[11] == p and b[13] == p) or
+                (b[10] == 0 and b[12] == p and b[15] == p) or
+                (b[16] == 0 and b[19] == p and b[21] == p) or
+                (b[18] == 0 and b[20] == p and b[23] == p))
+
+    if is_mill(game_state.board, player, 22, 14, 6):
+        res += ((b[5] == 0 and b[3] == p and b[0] == p) or
+                (b[7] == 0 and b[4] == p and b[2] == p) or
+                (b[13] == 0 and b[11] == p and b[8] == p) or
+                (b[15] == 0 and b[12] == p and b[10] == p) or
+                (b[21] == 0 and b[19] == p and b[16] == p) or
+                (b[23] == 0 and b[20] == p and b[18] == p))
+
+    if is_mill(game_state.board, player, 18, 20, 23):
+        res += ((b[17] == 0 and b[9] == p and b[1] == p) or
+                (b[12] == 0 and b[10] == p and b[15] == p) or
+                (b[22] == 0 and b[14] == p and b[6] == p))
+
+    if is_mill(game_state.board, player, 10, 12, 15):
+       res += ((b[9] == 0 and b[1] == p and b[17] == p) or
+               (b[20] == 0 and b[18] == p and b[23] == p) or
+               (b[4] == 0 and b[2] == p and b[7] == p) or
+               (b[14] == 0 and b[6] == p and b[22] == p))
+
+    if is_mill(game_state.board, player, 2, 4, 7):
+        res += ((b[1] == 0 and b[9] == p and b[17] == p) or
+                (b[12] == 0 and b[10] == p and b[15] == p) or
+                (b[6] == 0 and b[14] == p and b[22] == p))
+
+    return res
+
+
+def diff_in_number_of_double_mills(game_state):
+    return number_of_double_mills_per_player(game_state, 1) - number_of_double_mills_per_player(game_state, 2)
+
+
+def is_winning_conf(game_state):
+    """
+    :return: 1 if the state is winning for the player, -1 if losing, 0 otherwise
+    """
+    if game_state.curr_player == 1:
+        if (len(np.where(game_state.board == 2)) < 3 or
+                number_of_blocked_soldiers_per_player(game_state, 2) == len(np.where(game_state.board == 2))):
+            return 1
+        else:
+            return 0
+    else:
+        if (len(np.where(game_state.board == 1)) < 3 or
+                number_of_blocked_soldiers_per_player(game_state, 1) == len(np.where(game_state.board == 1))):
+            return -1
+        else:
+            return 0
+
+
+def heuristic_stage1(game_state):
+    h = 18 * closed_mill(game_state) + 26 * diff_in_number_of_mills(game_state) + \
+        1 * diff_in_number_of_blocked_soldiers(game_state) + 9 * diff_in_number_of_soldiers(game_state) + \
+        10 * diff_in_number_of_incomplete_mills(game_state) + 7 * diff_in_number_of_two_way_incomplete_mill(game_state)
+    return h
+
+
+def heuristic_stage2(game_state):
+    h = 14 * closed_mill(game_state) + 43 * diff_in_number_of_mills(game_state) + \
+        10 * diff_in_number_of_blocked_soldiers(game_state) + 11 * diff_in_number_of_soldiers(game_state) + \
+        8 * diff_in_number_of_double_mills(game_state) + 1086 * is_winning_conf(game_state)
+    return h
+
+
 class SearchAlgos:
-    def __init__(self, utility, succ, perform_move=None, goal=None):
+    def __init__(self, utility, succ):
         """The constructor for all the search algos.
         You can code these functions as you like to, 
         and use them in MiniMax and AlphaBeta algos as learned in class
@@ -38,24 +406,20 @@ class SearchAlgos:
         """
         self.utility = utility
         self.succ = succ
-        self.perform_move = perform_move
-        self.goal = goal
+       # self.perform_move = perform_move
+        self.goal = is_winning_conf
 
     def search(self, game_state, depth, maximizing_player, time_limit, start_time):
         pass
 
-    def heuristic(self, game_state):
-        h = .....
-        return h
-
 
 class MiniMax(SearchAlgos):
 
-    def search(self, state, depth, maximizing_player, time_limit, start_time):
+    def search(self, game_state, depth, maximizing_player, time_limit, start_time):
         """Start the MiniMax algorithm.
         :param start_time:
         :param time_limit:
-        :param state: The state to start from.
+        :param game_state: The state to start from.
         :param depth: The maximum allowed depth for the algorithm.
         :param maximizing_player: Whether this is a max node (True) or a min node (False).
         :return: A tuple: (The min max algorithm value, The direction in case of max node or None in min mode)
@@ -63,37 +427,36 @@ class MiniMax(SearchAlgos):
         if time.time() - start_time >= time_limit:
             raise Timeout
 
-        if self.goal(state) or depth == 0:
+        if abs(self.goal(game_state)) or depth == 0:
             if maximizing_player:
-                return self.utility(state), 000   # TODO: replace 000, "direction in case of max node"???
+                return self.utility(game_state), 000   # TODO: replace 000, "direction in case of max node"???
             else:
-                return self.utility(state), None
+                return self.utility(game_state), None
 
-        children = self.succ(state, 2 - maximizing_player)
+        children = self.succ(game_state, 2 - maximizing_player)
 
         if maximizing_player:
             cur_max = -np.inf
             for c in children:
-                value = self.search(c, depth-1, not maximizing_player)
+                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)
                 cur_max = max(value, cur_max)
             return cur_max
 
         else:
             cur_min = np.inf
             for c in children:
-                value = self.search(c, depth-1, not maximizing_player)
+                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)
                 cur_min = min(value, cur_min)
             return cur_min
 
 
-
 class AlphaBeta(SearchAlgos):
 
-    def search(self, state, depth, maximizing_player, time_limit, start_time, alpha=ALPHA_VALUE_INIT, beta=BETA_VALUE_INIT):
+    def search(self, game_state, depth, maximizing_player, time_limit, start_time, alpha=ALPHA_VALUE_INIT, beta=BETA_VALUE_INIT):
         """Start the AlphaBeta algorithm.
         :param time_limit:
         :param start_time:
-        :param state: The state to start from.
+        :param game_state: The state to start from.
         :param depth: The maximum allowed depth for the algorithm.
         :param maximizing_player: Whether this is a max node (True) or a min node (False).
         :param alpha: alpha value
@@ -103,18 +466,18 @@ class AlphaBeta(SearchAlgos):
         if time.time() - start_time >= time_limit:
             raise Timeout
 
-        if self.goal(state) or depth == 0:
+        if abs(self.goal(game_state)) or depth == 0:
             if maximizing_player:
-                return self.utility(state), 000   # TODO: replace 000, "direction in case of max node"???
+                return self.utility(game_state), 000   # TODO: replace 000, "direction in case of max node"???
             else:
-                return self.utility(state), None
+                return self.utility(game_state), None
 
-        children = self.succ(state, 2 - maximizing_player)
+        children = self.succ(game_state, 2 - maximizing_player)
 
         if maximizing_player:
             cur_max = -np.inf
             for c in children:
-                value = self.search(c, depth - 1, not maximizing_player, alpha, beta)
+                value = self.search(c, depth - 1, not maximizing_player, time_limit, start_time, alpha, beta)
                 cur_max = max(value, cur_max)
                 alpha = max(cur_max, alpha)
                 if cur_max >= beta:
@@ -124,7 +487,7 @@ class AlphaBeta(SearchAlgos):
         else:
             cur_min = np.inf
             for c in children:
-                value = self.search(c, depth-1, not maximizing_player, alpha, beta)
+                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time, alpha, beta)
                 cur_min = min(value, cur_min)
                 beta = min(cur_min, beta)
                 if cur_min <= alpha:
