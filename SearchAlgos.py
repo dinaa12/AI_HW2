@@ -382,15 +382,15 @@ def is_winning_conf(game_state):
 
 def heuristic_stage1(game_state):
     h = 18 * closed_mill(game_state) + 26 * diff_in_number_of_mills(game_state) + \
-        1 * diff_in_number_of_blocked_soldiers(game_state) + 9 * diff_in_number_of_soldiers(game_state) + \
-        10 * diff_in_number_of_incomplete_mills(game_state) + 7 * diff_in_number_of_two_way_incomplete_mill(game_state)
+        1 * diff_in_number_of_blocked_soldiers(game_state) + 6 * diff_in_number_of_soldiers(game_state) + \
+        12 * diff_in_number_of_incomplete_mills(game_state) + 7 * diff_in_number_of_two_way_incomplete_mill(game_state)
     return h
 
 
 def heuristic_stage2(game_state):
     h = 14 * closed_mill(game_state) + 43 * diff_in_number_of_mills(game_state) + \
-        10 * diff_in_number_of_blocked_soldiers(game_state) + 11 * diff_in_number_of_soldiers(game_state) + \
-        8 * diff_in_number_of_double_mills(game_state) + 1086 * is_winning_conf(game_state)
+        10 * diff_in_number_of_blocked_soldiers(game_state) + 8 * diff_in_number_of_soldiers(game_state) + \
+        42 * diff_in_number_of_double_mills(game_state) + 1086 * is_winning_conf(game_state)
     return h
 
 
@@ -398,18 +398,22 @@ def heuristic_stage2(game_state):
 
 def succ_stage1(game_state):
     new_game_state = copy.deepcopy(game_state)
-    new_game_state.curr_player = 3 - game_state.curr_player
+
     for cell in range(23):
         if new_game_state.board[cell] == 0:
             new_game_state.board[cell] = new_game_state.curr_player
             new_game_state.player_move = cell
-            num_of_soldier = np.where(new_game_state.my_pos == -1)[0][0]
+
             if new_game_state.curr_player == 1:
+                num_of_soldier = np.where(new_game_state.my_pos == -1)[0][0]
                 new_game_state.my_pos[num_of_soldier] = cell
             else:
+                num_of_soldier = np.where(new_game_state.rival_pos == -1)[0][0]
                 new_game_state.rival_pos[num_of_soldier] = cell
 
+            new_game_state.curr_player = 3 - new_game_state.curr_player
             yield new_game_state
+            new_game_state.curr_player = 3 - new_game_state.curr_player
 
             new_game_state.board[cell] = 0
             if new_game_state.curr_player == 1:
@@ -420,7 +424,7 @@ def succ_stage1(game_state):
 
 def succ_stage2(game_state):
     new_game_state = copy.deepcopy(game_state)
-    new_game_state.curr_player = 3 - game_state.curr_player
+
     for cell in range(23):
         if new_game_state.board[cell] == new_game_state.curr_player:
             new_game_state.board[cell] = 0
@@ -429,13 +433,16 @@ def succ_stage2(game_state):
                     new_game_state.board[d] = new_game_state.curr_player
                     new_game_state.player_move = d
 
-                    num_of_soldier = np.where(new_game_state.my_pos == cell)[0][0]
                     if new_game_state.curr_player == 1:
+                        num_of_soldier = np.where(new_game_state.my_pos == cell)[0][0]
                         new_game_state.my_pos[num_of_soldier] = d
                     else:
+                        num_of_soldier = np.where(new_game_state.rival_pos == cell)[0][0]
                         new_game_state.rival_pos[num_of_soldier] = d
 
+                    new_game_state.curr_player = 3 - new_game_state.curr_player
                     yield new_game_state
+                    new_game_state.curr_player = 3 - new_game_state.curr_player
 
                     new_game_state.board[d] = 0
                     if new_game_state.curr_player == 1:
@@ -499,7 +506,7 @@ class MiniMax(SearchAlgos):
                     next_game_state = copy.deepcopy(c)
             return cur_max, next_game_state
 
-        else:  # להוסיף פה גם next_game_state או שסבבה להחזיר none
+        else:
             cur_min = np.inf
             for c in children:
                 value = self.search(c, depth-1, not maximizing_player, time_limit, start_time)[0]
@@ -525,28 +532,31 @@ class AlphaBeta(SearchAlgos):
 
         if abs(self.goal(game_state)) or depth == 0:
             if maximizing_player:
-                return self.utility(game_state), 000   # TODO: replace 000, "direction in case of max node"???
+                return self.utility(game_state), game_state
             else:
                 return self.utility(game_state), None
 
-        children = self.succ(game_state, 2 - maximizing_player)
+        children = self.succ(game_state)
 
         if maximizing_player:
             cur_max = -np.inf
+            next_game_state = None
             for c in children:
-                value = self.search(c, depth - 1, not maximizing_player, time_limit, start_time, alpha, beta)
-                cur_max = max(value, cur_max)
+                ret_val = self.search(c, depth - 1, not maximizing_player, time_limit, start_time, alpha, beta)
+                if ret_val[0] > cur_max:
+                    cur_max = ret_val[0]
+                    next_game_state = copy.deepcopy(c)
                 alpha = max(cur_max, alpha)
                 if cur_max >= beta:
-                    return np.inf
-            return cur_max
+                    return np.inf, next_game_state
+            return cur_max, next_game_state
 
         else:
             cur_min = np.inf
             for c in children:
-                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time, alpha, beta)
+                value = self.search(c, depth-1, not maximizing_player, time_limit, start_time, alpha, beta)[0]
                 cur_min = min(value, cur_min)
                 beta = min(cur_min, beta)
                 if cur_min <= alpha:
-                    return -np.inf
-            return cur_min
+                    return -np.inf, None
+            return cur_min, None
