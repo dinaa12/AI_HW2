@@ -13,7 +13,7 @@ class Timeout(Exception):
 
 
 class GameState:
-    def __init__(self, board, curr_player, my_pos, rival_pos, player_move=None, self_prev_board=None):
+    def __init__(self, board, curr_player, my_pos, rival_pos, player_move=None, last_4_boards=[]):
         """
         :param board: board state
         :param curr_player: player who performed last move, 1 - maximizer, 2 - opponent
@@ -24,7 +24,7 @@ class GameState:
         self.player_move = player_move
         self.my_pos = my_pos
         self.rival_pos = rival_pos
-        self.self_prev_board = self_prev_board
+        self.last_4_boards = last_4_boards
 
 
 ### Functions to calc heuristic ###
@@ -395,11 +395,19 @@ def heuristic_stage2(game_state):
     return h
 
 
+def light_heuristic_stage1(game_state):
+    h = 25 * diff_in_number_of_mills(game_state) + 20 * diff_in_number_of_mills(game_state)
+    return h
+
+
+def light_heuristic_stage2(game_state):
+    h = 25 * diff_in_number_of_mills(game_state) + 1000 * is_winning_conf(game_state)
+    return h
+
 ### succ funcs ###
 
 def succ_stage1(game_state):
     new_game_state = copy.deepcopy(game_state)
-    new_game_state.self_prev_board = game_state.board
 
     for cell in range(23):
         if new_game_state.board[cell] == 0:
@@ -427,6 +435,7 @@ def succ_stage1(game_state):
 
 def succ_stage2(game_state):
     new_game_state = copy.deepcopy(game_state)
+    new_game_state.last_4_boards = copy.deepcopy(game_state.last_4_boards)
 
     for cell in range(23):
         if new_game_state.board[cell] == new_game_state.curr_player:
@@ -444,7 +453,21 @@ def succ_stage2(game_state):
                         new_game_state.rival_pos[num_of_soldier] = d
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
-                    yield new_game_state
+
+                    if not (len(game_state.last_4_boards) == 4 and
+                            (game_state.board == game_state.last_4_boards[0]).all() and
+                            (new_game_state.board == game_state.last_4_boards[1]).all()):  # check not loop
+
+                        if len(game_state.last_4_boards) == 4:
+                            print(game_state.board)
+                            print(game_state.last_4_boards[0])
+
+                        yield new_game_state
+
+                    new_game_state.last_4_boards.append(game_state.board)
+                    if len(new_game_state.last_4_boards) == 5:
+                        del new_game_state.last_4_boards[0]
+
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 
                     new_game_state.board[d] = 0
