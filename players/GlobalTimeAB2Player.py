@@ -19,15 +19,15 @@ class Player(AbstractPlayer):
         output:
             - direction: tuple, specifing the Player's movement
         """
-        turn_time = self.left_game_time * 0.3
+        turn_time = self.left_game_time * 0.002
         start = time.time()
 
         if self.turn < 18:
-            move = self._stage_1_move(turn_time - 0.1)
+            move = self._stage_1_move(turn_time - 0.001)
             self.turn += 1
 
         else:
-            move = self._stage_2_move(turn_time - 0.1)
+            move = self._stage_2_move(turn_time - 0.001)
             self.turn += 1
 
         self.left_game_time -= (time.time() - start)

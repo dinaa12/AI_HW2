@@ -5,8 +5,8 @@ import utils
 import numpy as np
 
 if __name__ == "__main__":
-    players_options = [x+'Player' for x in ['Live', 'Simple', 'Minimax', 'Alphabeta', 'GlobalTimeAB', 'LightAB',
-                                            'HeavyAB', 'Compete']]
+    players_options = [x+'Player' for x in ['Live', 'Simple', 'Minimax', 'Alphabeta', 'GlobalTimeAB', 'GlobalTimeAB2',
+                                            'LightAB', 'HeavyAB', 'Compete']]
 
     parser = argparse.ArgumentParser()
     
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument('-player2', default='SimplePlayer',  type=str,
                         help='The type of the second player.',
                         choices=players_options)
-    parser.add_argument('-move_time', default=250, type=float, 
+    parser.add_argument('-move_time', default=250, type=float,
                         help='Time (sec) for each turn.')
     parser.add_argument('-game_time', default=2000, type=float, 
                         help='Global game time (sec) for each player.')
@@ -30,8 +30,10 @@ if __name__ == "__main__":
         raise Exception('Wrong time arguments.')
 
     # Players inherit from AbstractPlayer - this allows maximum flexibility and modularity
-    player_1_type = 'players.' + 'LivePlayer'
-    player_2_type = 'players.' + 'MinimaxPlayer'
+    player_1_type = 'players.' + args.player1
+    player_2_type = 'players.' + args.player2
+    # player_1_type = 'players.' + 'SimplePlayer'
+    # player_2_type = 'players.' + 'MinimaxPlayer'
     game_time = args.game_time
     __import__(player_1_type)
     __import__(player_2_type)

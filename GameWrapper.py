@@ -69,6 +69,7 @@ class GameWrapper:
                         f'    Player {3 - player_index_time_up} Won!']
             self.pretty_print_end_game(messages)
 
+        print(move[0], move[1], move[2])
         assert self.game.check_move(move), 'illegal move'
 
         self.players[1 - player_index].set_rival_move(move)

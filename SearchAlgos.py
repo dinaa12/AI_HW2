@@ -5,7 +5,7 @@ import numpy as np
 import utils
 import copy
 ALPHA_VALUE_INIT = -np.inf
-BETA_VALUE_INIT = np.inf # !!!!!
+BETA_VALUE_INIT = np.inf  # !!!!!
 
 
 class Timeout(Exception):
@@ -13,7 +13,7 @@ class Timeout(Exception):
 
 
 class GameState:
-    def __init__(self, board, curr_player, my_pos, rival_pos, player_move=None):
+    def __init__(self, board, curr_player, my_pos, rival_pos, player_move=None, self_prev_board=None):
         """
         :param board: board state
         :param curr_player: player who performed last move, 1 - maximizer, 2 - opponent
@@ -24,6 +24,7 @@ class GameState:
         self.player_move = player_move
         self.my_pos = my_pos
         self.rival_pos = rival_pos
+        self.self_prev_board = self_prev_board
 
 
 ### Functions to calc heuristic ###
@@ -396,8 +397,9 @@ def heuristic_stage2(game_state):
 
 ### succ funcs ###
 
-def succ_stage1(game_state):
+def succ_stage1(game_state, return_one=False):
     new_game_state = copy.deepcopy(game_state)
+    new_game_state.self_prev_board = game_state.board
 
     for cell in range(23):
         if new_game_state.board[cell] == 0:
@@ -412,17 +414,20 @@ def succ_stage1(game_state):
                 new_game_state.rival_pos[num_of_soldier] = cell
 
             new_game_state.curr_player = 3 - new_game_state.curr_player
+            if return_one:
+                return new_game_state
             yield new_game_state
             new_game_state.curr_player = 3 - new_game_state.curr_player
 
-            new_game_state.board[cell] = 0
             if new_game_state.curr_player == 1:
                 new_game_state.my_pos[num_of_soldier] = -1
             else:
                 new_game_state.rival_pos[num_of_soldier] = -1
 
+            new_game_state.board[cell] = 0
 
-def succ_stage2(game_state):
+
+def succ_stage2(game_state, return_one=False):
     new_game_state = copy.deepcopy(game_state)
 
     for cell in range(23):
@@ -441,6 +446,9 @@ def succ_stage2(game_state):
                         new_game_state.rival_pos[num_of_soldier] = d
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
+                    print('!!! ', cell, d)
+                    if return_one:
+                        return new_game_state
                     yield new_game_state
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 

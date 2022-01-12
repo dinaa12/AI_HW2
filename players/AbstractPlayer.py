@@ -5,6 +5,7 @@ import utils
 import time
 import numpy as np
 from SearchAlgos import Timeout
+import copy
 from SearchAlgos import GameState
 import SearchAlgos
 
@@ -23,6 +24,10 @@ class AbstractPlayer:
         self.game_time = game_time
         self.board = np.array(24)
         self.directions = utils.get_directions
+        self.my_pos = None
+        self.rival_pos = None
+        self.turn = 0
+        self.left_game_time = game_time
 
     def set_game_params(self, board):
         """Set the game parameters needed for this player.
@@ -165,11 +170,25 @@ class AbstractPlayer:
     def _iterative_deepening(self, start_state, time_limit, algo):
         start = time.time()
         depth = 1
-        ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
+        c = algo.succ(start_state, True)
+        default_next_game_state = copy.deepcopy(c)
+
+        try:
+            ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
+        except Timeout:
+            next_game_state = default_next_game_state
+            cell = next_game_state.player_move
+            soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
+            rival_cell = -1 if not self.is_mill(cell) else self._make_mill_get_rival_cell()
+            print('returned move: ', cell)
+            return cell, soldier_that_moved, rival_cell
+
         cell = next_game_state.player_move
         soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
 
         try:
+            if time_limit < 0.1:
+                raise Timeout
             while time.time() - start < time_limit:
                 ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
                 cell = next_game_state.player_move
@@ -184,3 +203,9 @@ class AbstractPlayer:
 
         rival_cell = -1 if not self.is_mill(cell) else self._make_mill_get_rival_cell()
         return cell, soldier_that_moved, rival_cell
+
+    def _stage_1_move(self, time_limit) -> tuple:
+        raise NotImplementedError
+
+    def _stage_2_move(self, time_limit) -> tuple:
+        raise NotImplementedError
