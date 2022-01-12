@@ -172,28 +172,14 @@ class AbstractPlayer:
         depth = 1
         for c in algo.succ(start_state):
             default_next_game_state = copy.deepcopy(c)
-            print('default_next_game_state . cell: ', default_next_game_state.player_move)
             break
+        cell = default_next_game_state.player_move
+        soldier_that_moved = np.where(self.my_pos != default_next_game_state.my_pos)[0][0]
 
         try:
             ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
-        except Timeout:
-            next_game_state = default_next_game_state
             cell = next_game_state.player_move
             soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
-            old_cell = self.my_pos[soldier_that_moved]
-            self.my_pos[soldier_that_moved] = cell
-            self.board[cell] = 1
-            if old_cell != -1:
-                self.board[old_cell] = 0
-            rival_cell = -1 if not self.is_mill(cell) else self._make_mill_get_rival_cell()
-            print('returned move: ', cell)
-            return cell, soldier_that_moved, rival_cell
-
-        cell = next_game_state.player_move
-        soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
-
-        try:
             if time_limit < 0.1:
                 raise Timeout
             while time.time() - start < time_limit:
@@ -201,6 +187,7 @@ class AbstractPlayer:
                 cell = next_game_state.player_move
                 soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
                 depth += 1
+
         except Timeout:
             old_cell = self.my_pos[soldier_that_moved]
             self.my_pos[soldier_that_moved] = cell

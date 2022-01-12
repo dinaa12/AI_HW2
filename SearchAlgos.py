@@ -429,7 +429,6 @@ def succ_stage2(game_state):
     new_game_state = copy.deepcopy(game_state)
 
     for cell in range(23):
-        print('cell = ', cell, ' board[cell] = ', new_game_state.board[cell])
         if new_game_state.board[cell] == new_game_state.curr_player:
             new_game_state.board[cell] = 0
             for d in utils.get_directions(cell):
@@ -445,7 +444,6 @@ def succ_stage2(game_state):
                         new_game_state.rival_pos[num_of_soldier] = d
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
-                    print('!!! ', cell, d)
                     yield new_game_state
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 
