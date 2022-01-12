@@ -177,16 +177,25 @@ class AbstractPlayer:
         soldier_that_moved = np.where(self.my_pos != default_next_game_state.my_pos)[0][0]
 
         try:
+            start_iteration = time.time()
             ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
+            end_iteration = time.time()
+            last_iteration_time = end_iteration - start_iteration
+
             cell = next_game_state.player_move
             soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
-            if time_limit < 0.1:
-                raise Timeout
-            while time.time() - start < time_limit:
+
+            while time_limit < 2 * last_iteration_time:
+                start_iteration = time.time()
                 ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
+                end_iteration = time.time()
+                last_iteration_time = end_iteration - start_iteration
+
                 cell = next_game_state.player_move
                 soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
                 depth += 1
+
+            raise Timeout
 
         except Timeout:
             old_cell = self.my_pos[soldier_that_moved]
