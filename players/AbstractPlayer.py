@@ -170,8 +170,10 @@ class AbstractPlayer:
     def _iterative_deepening(self, start_state, time_limit, algo):
         start = time.time()
         depth = 1
-        c = algo.succ(start_state, True)
-        default_next_game_state = copy.deepcopy(c)
+        for c in algo.succ(start_state):
+            default_next_game_state = copy.deepcopy(c)
+            print('default_next_game_state . cell: ', default_next_game_state.player_move)
+            break
 
         try:
             ret_val, next_game_state = algo.search(start_state, depth, True, time_limit, start)
@@ -179,6 +181,11 @@ class AbstractPlayer:
             next_game_state = default_next_game_state
             cell = next_game_state.player_move
             soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
+            old_cell = self.my_pos[soldier_that_moved]
+            self.my_pos[soldier_that_moved] = cell
+            self.board[cell] = 1
+            if old_cell != -1:
+                self.board[old_cell] = 0
             rival_cell = -1 if not self.is_mill(cell) else self._make_mill_get_rival_cell()
             print('returned move: ', cell)
             return cell, soldier_that_moved, rival_cell

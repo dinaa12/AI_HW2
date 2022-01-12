@@ -397,7 +397,7 @@ def heuristic_stage2(game_state):
 
 ### succ funcs ###
 
-def succ_stage1(game_state, return_one=False):
+def succ_stage1(game_state):
     new_game_state = copy.deepcopy(game_state)
     new_game_state.self_prev_board = game_state.board
 
@@ -414,8 +414,6 @@ def succ_stage1(game_state, return_one=False):
                 new_game_state.rival_pos[num_of_soldier] = cell
 
             new_game_state.curr_player = 3 - new_game_state.curr_player
-            if return_one:
-                return new_game_state
             yield new_game_state
             new_game_state.curr_player = 3 - new_game_state.curr_player
 
@@ -427,10 +425,11 @@ def succ_stage1(game_state, return_one=False):
             new_game_state.board[cell] = 0
 
 
-def succ_stage2(game_state, return_one=False):
+def succ_stage2(game_state):
     new_game_state = copy.deepcopy(game_state)
 
     for cell in range(23):
+        print('cell = ', cell, ' board[cell] = ', new_game_state.board[cell])
         if new_game_state.board[cell] == new_game_state.curr_player:
             new_game_state.board[cell] = 0
             for d in utils.get_directions(cell):
@@ -447,8 +446,6 @@ def succ_stage2(game_state, return_one=False):
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
                     print('!!! ', cell, d)
-                    if return_one:
-                        return new_game_state
                     yield new_game_state
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 
