@@ -435,7 +435,6 @@ def succ_stage1(game_state):
 
 def succ_stage2(game_state):
     new_game_state = copy.deepcopy(game_state)
-    new_game_state.last_4_boards = copy.deepcopy(game_state.last_4_boards)
 
     for cell in range(23):
         if new_game_state.board[cell] == new_game_state.curr_player:
@@ -454,19 +453,7 @@ def succ_stage2(game_state):
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 
-                    if not (len(game_state.last_4_boards) == 4 and
-                            (game_state.board == game_state.last_4_boards[0]).all() and
-                            (new_game_state.board == game_state.last_4_boards[1]).all()):  # check not loop
-
-                        if len(game_state.last_4_boards) == 4:
-                            print(game_state.board)
-                            print(game_state.last_4_boards[0])
-
-                        yield new_game_state
-
-                    new_game_state.last_4_boards.append(game_state.board)
-                    if len(new_game_state.last_4_boards) == 5:
-                        del new_game_state.last_4_boards[0]
+                    yield new_game_state
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 

@@ -27,7 +27,6 @@ class AbstractPlayer:
         self.my_pos = None
         self.rival_pos = None
         self.turn = 0
-        self.left_game_time = game_time
 
     def set_game_params(self, board):
         """Set the game parameters needed for this player.
