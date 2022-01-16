@@ -13,7 +13,7 @@ class Timeout(Exception):
 
 
 class GameState:
-    def __init__(self, board, curr_player, my_pos, rival_pos, player_move=None, last_4_boards=[]):
+    def __init__(self, board, curr_player, my_pos, rival_pos, turn, player_move=None):
         """
         :param board: board state
         :param curr_player: player who performed last move, 1 - maximizer, 2 - opponent
@@ -24,7 +24,7 @@ class GameState:
         self.player_move = player_move
         self.my_pos = my_pos
         self.rival_pos = rival_pos
-        self.last_4_boards = last_4_boards
+        self.turn = turn
 
 
 ### Functions to calc heuristic ###
@@ -367,6 +367,8 @@ def is_winning_conf(game_state):
     """
     :return: 1 if the state is winning for the player, -1 if losing, 0 otherwise
     """
+    if game_state.turn < 18:
+        return 0
     if game_state.curr_player == 1:
         if (len(np.where(game_state.board == 2)[0]) < 3 or
                 number_of_blocked_soldiers_per_player(game_state, 2) == len(np.where(game_state.board == 2)[0])):
@@ -404,7 +406,14 @@ def light_heuristic_stage2(game_state):
     h = 25 * diff_in_number_of_mills(game_state) + 1000 * is_winning_conf(game_state)
     return h
 
+
 ### succ funcs ###
+def choose_succ_func(game_state):
+        if game_state.turn < 18:
+            return succ_stage1(game_state)
+        else:
+            return succ_stage2(game_state)
+
 
 def succ_stage1(game_state):
     new_game_state = copy.deepcopy(game_state)
@@ -422,7 +431,11 @@ def succ_stage1(game_state):
                 new_game_state.rival_pos[num_of_soldier] = cell
 
             new_game_state.curr_player = 3 - new_game_state.curr_player
+            new_game_state.turn += 1
+
             yield new_game_state
+
+            new_game_state.turn -= 1
             new_game_state.curr_player = 3 - new_game_state.curr_player
 
             if new_game_state.curr_player == 1:
@@ -452,9 +465,11 @@ def succ_stage2(game_state):
                         new_game_state.rival_pos[num_of_soldier] = d
 
                     new_game_state.curr_player = 3 - new_game_state.curr_player
+                    new_game_state.turn += 1
 
                     yield new_game_state
 
+                    new_game_state.turn -= 1
                     new_game_state.curr_player = 3 - new_game_state.curr_player
 
                     new_game_state.board[d] = 0
@@ -472,7 +487,7 @@ def goal_func_stage1(game_state):
 
 
 class SearchAlgos:
-    def __init__(self, utility, succ, goal):
+    def __init__(self, utility):
         """The constructor for all the search algos.
         You can code these functions as you like to, 
         and use them in MiniMax and AlphaBeta algos as learned in class
@@ -480,8 +495,8 @@ class SearchAlgos:
         :param succ: The successor function.
         """
         self.utility = utility
-        self.succ = succ
-        self.goal = goal
+        self.succ = choose_succ_func
+        self.goal = is_winning_conf
 
     def search(self, game_state, depth, maximizing_player, time_limit, start_time):
         pass
@@ -512,7 +527,7 @@ class MiniMax(SearchAlgos):
         if maximizing_player:
             cur_max = -np.inf
             next_game_state = None
-            for c in self.succ(game_state):
+            for c in children:
                 ret_val = self.search(c, depth-1, not maximizing_player, time_limit, start_time)
                 if ret_val[0] > cur_max:
                     cur_max = ret_val[0]
@@ -531,6 +546,7 @@ class AlphaBeta(SearchAlgos):
 
     def search(self, game_state, depth, maximizing_player, time_limit, start_time, alpha=ALPHA_VALUE_INIT, beta=BETA_VALUE_INIT):
         """Start the AlphaBeta algorithm.
+        :param turn:
         :param time_limit:
         :param start_time:
         :param game_state: The state to start from.
