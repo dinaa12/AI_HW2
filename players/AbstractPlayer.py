@@ -184,6 +184,7 @@ class AbstractPlayer:
 
             cell = next_game_state.player_move
             soldier_that_moved = np.where(self.my_pos != next_game_state.my_pos)[0][0]
+            depth += 1
 
             while time_limit - (time.time() - start) >= 2 * last_iteration_time:
                 start_iteration = time.time()

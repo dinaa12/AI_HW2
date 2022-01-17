@@ -38,12 +38,12 @@ class Player(AbstractPlayer):
     ########## helper functions in class ##########
     def _stage_1_move(self, time_limit) -> tuple:
         start_state = GameState(self.board, 1, self.my_pos, self.rival_pos, self.turn)
-        alphabeta = AlphaBeta(SearchAlgos.heuristic_stage1)
+        alphabeta = AlphaBeta()
         return self._iterative_deepening(start_state, time_limit, alphabeta)
 
     def _stage_2_move(self, time_limit) -> tuple:
         start_state = GameState(self.board, 1, self.my_pos, self.rival_pos, self.turn)
-        alphabeta = AlphaBeta(SearchAlgos.heuristic_stage2)
+        alphabeta = AlphaBeta()
         return self._iterative_deepening(start_state, time_limit, alphabeta)
 
 

@@ -393,9 +393,15 @@ def heuristic_stage1(game_state):
 def heuristic_stage2(game_state):
     h = 14 * closed_mill(game_state) + 43 * diff_in_number_of_mills(game_state) + \
         10 * diff_in_number_of_blocked_soldiers(game_state) + 8 * diff_in_number_of_soldiers(game_state) + \
-        42 * diff_in_number_of_double_mills(game_state) + 1086 * is_winning_conf(game_state)
+        1086 * is_winning_conf(game_state) + 42 * diff_in_number_of_double_mills(game_state)
     return h
 
+
+def choose_heuristic_func(game_state):
+    if game_state.turn < 18:
+        return heuristic_stage1(game_state)
+    else:
+        return heuristic_stage2(game_state)
 
 def light_heuristic_stage1(game_state):
     h = 25 * diff_in_number_of_mills(game_state) + 20 * diff_in_number_of_mills(game_state)
@@ -409,10 +415,10 @@ def light_heuristic_stage2(game_state):
 
 ### succ funcs ###
 def choose_succ_func(game_state):
-        if game_state.turn < 18:
-            return succ_stage1(game_state)
-        else:
-            return succ_stage2(game_state)
+    if game_state.turn < 18:
+        return succ_stage1(game_state)
+    else:
+        return succ_stage2(game_state)
 
 
 def succ_stage1(game_state):
@@ -487,14 +493,14 @@ def goal_func_stage1(game_state):
 
 
 class SearchAlgos:
-    def __init__(self, utility):
+    def __init__(self):
         """The constructor for all the search algos.
         You can code these functions as you like to, 
         and use them in MiniMax and AlphaBeta algos as learned in class
         :param utility: The utility function.
         :param succ: The successor function.
         """
-        self.utility = utility
+        self.utility = choose_heuristic_func
         self.succ = choose_succ_func
         self.goal = is_winning_conf
 
