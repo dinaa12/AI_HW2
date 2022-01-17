@@ -403,8 +403,9 @@ def choose_heuristic_func(game_state):
     else:
         return heuristic_stage2(game_state)
 
+
 def light_heuristic_stage1(game_state):
-    h = 25 * diff_in_number_of_mills(game_state) + 20 * diff_in_number_of_mills(game_state)
+    h = 25 * diff_in_number_of_mills(game_state)
     return h
 
 
@@ -493,14 +494,14 @@ def goal_func_stage1(game_state):
 
 
 class SearchAlgos:
-    def __init__(self):
+    def __init__(self, utility=choose_heuristic_func):
         """The constructor for all the search algos.
         You can code these functions as you like to, 
         and use them in MiniMax and AlphaBeta algos as learned in class
         :param utility: The utility function.
         :param succ: The successor function.
         """
-        self.utility = choose_heuristic_func
+        self.utility = utility
         self.succ = choose_succ_func
         self.goal = is_winning_conf
 

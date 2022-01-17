@@ -14,7 +14,6 @@ import time
 class Player(AbstractPlayer):
     def __init__(self, game_time):
         AbstractPlayer.__init__(self, game_time)  # keep the inheritance of the parent's (AbstractPlayer) __init__()
-        # TODO: initialize more fields, if needed, and the AlphaBeta algorithm from SearchAlgos.py
 
     def _iterative_deepening(self, start_state, time_limit, algo):
         ret_val, next_game_state = algo.search(start_state, 2, True, np.inf, time.time())
@@ -29,11 +28,11 @@ class Player(AbstractPlayer):
         return cell, soldier_that_moved, rival_cell
 
     def _stage_1_move(self, time_limit) -> tuple:
-        start_state = GameState(self.board, 1, self.my_pos, self.rival_pos)
-        alphabeta = AlphaBeta(SearchAlgos.heuristic_stage1, SearchAlgos.succ_stage1, SearchAlgos.goal_func_stage1)
+        start_state = GameState(self.board, 1, self.my_pos, self.rival_pos, self.turn)
+        alphabeta = AlphaBeta()
         return self._iterative_deepening(start_state, time_limit, alphabeta)
 
     def _stage_2_move(self, time_limit) -> tuple:
-        start_state = GameState(self.board, 1, self.my_pos, self.rival_pos)
-        alphabeta = AlphaBeta(SearchAlgos.heuristic_stage2, SearchAlgos.succ_stage2, SearchAlgos.is_winning_conf)
+        start_state = GameState(self.board, 1, self.my_pos, self.rival_pos, self.turn)
+        alphabeta = AlphaBeta()
         return self._iterative_deepening(start_state, time_limit, alphabeta)
