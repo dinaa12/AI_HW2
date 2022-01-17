@@ -2,26 +2,16 @@
 Player for the competition
 """
 from players.AbstractPlayer import AbstractPlayer
-#TODO: you can import more modules, if needed
+from SearchAlgos import AlphaBeta
+from SearchAlgos import GameState
+import SearchAlgos
+import time
 
 
 class Player(AbstractPlayer):
     def __init__(self, game_time):
         AbstractPlayer.__init__(self, game_time) # keep the inheritance of the parent's (AbstractPlayer) __init__()
         #TODO: initialize more fields, if needed, and the wanted algorithm from SearchAlgos.py
-
-
-    def set_game_params(self, board):
-        """Set the game parameters needed for this player.
-        This function is called before the game starts.
-        (See GameWrapper.py for more info where it is called)
-        input:
-            - board: np.array of the board.
-        No output is expected.
-        """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
-    
 
     def make_move(self, time_limit):
         """Make move with this Player.
@@ -30,23 +20,28 @@ class Player(AbstractPlayer):
         output:
             - direction: tuple, specifing the Player's movement
         """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
+        start = time.time()
 
+        if self.turn < 18:
+            turn_time = self.left_game_time * 0.075
+            move = self._stage_1_move(turn_time - 0.01)
+            self.turn += 1
 
-    def set_rival_move(self, move):
-        """Update your info, given the new position of the rival.
-        input:
-            - move: tuple, the new position of the rival.
-        No output is expected
-        """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
+        else:
+            turn_time = self.left_game_time * 0.15
+            move = self._stage_2_move(turn_time - 0.01)
+            self.turn += 1
 
+        self.left_game_time -= (time.time() - start)
+        return move
 
     ########## helper functions in class ##########
-    #TODO: add here helper functions in class, if needed
+    def _stage_1_move(self, time_limit) -> tuple:
+        start_state = GameState(self.board, 1, self.my_pos, self.rival_pos, self.turn)
+        alphabeta = AlphaBeta()
+        return self._iterative_deepening(start_state, time_limit, alphabeta)
 
-
-    ########## helper functions for the search algorithm ##########
-    #TODO: add here the utility, succ, and perform_move functions used in AlphaBeta algorithm
+    def _stage_2_move(self, time_limit) -> tuple:
+        start_state = GameState(self.board, 1, self.my_pos, self.rival_pos, self.turn)
+        alphabeta = AlphaBeta()
+        return self._iterative_deepening(start_state, time_limit, alphabeta)
